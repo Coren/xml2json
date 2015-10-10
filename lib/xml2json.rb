@@ -1,4 +1,4 @@
-require 'nokogiri'
+require 'libxml'
 require 'json'
 require 'active_support/inflector'
 require_relative './xml2json/configuration'
@@ -12,37 +12,48 @@ module XML2JSON
 
   def self.parse_to_hash xml
     begin
-      doc = Nokogiri.XML(xml) { |config| config.strict }
-    rescue Nokogiri::XML::SyntaxError
+      doc = LibXML::XML::Parser.string(xml, options: LibXML::XML::Parser::Options::NOBLANKS).parse
+    rescue LibXML::XML::Error
       raise InvalidXML.new
     end
 
     root = doc.root
     hash = { root.name => parse_node(root) }
-    hash[root.name] = { self.configuration.namespaces_key => root.namespaces }.merge(hash[root.name]) unless root.namespaces.empty?
+    hash[root.name] = { self.configuration.namespaces_key => 
+      Hash[root.namespaces.definitions.collect { |d| 
+       key = ( d.prefix && !d.prefix.strip.empty? ) ? "xmlns:#{d.prefix}" : 'xmlns'
+       [ key, d.href ] 
+      }]
+    }.merge(hash[root.name]) unless root.namespaces.definitions.empty?
     hash
   end
 
 
   def self.parse_node(node)
-    if node.element_children.count > 0
+    if node.children.count > 0
+      if node.children.size == 1
+        child = node.first
+        if child.text? or child.cdata?
+          return (node.attributes? ? parse_attributes(node).merge(text_hash(child)) : child.content)
+        end
+      end
       parse_attributes(node).merge(node2json(node))
     else
-      (node.attributes.empty? ? node.text : parse_attributes(node).merge(text_hash(node)))
+      node.attributes? ? parse_attributes(node).merge(text_hash(node)) : node.content
     end
   end
 
   def self.text_hash(node)
-    return {} if node.text.strip.empty?
-    { self.configuration.text_key => node.text }
+    return {} if node.content.strip.empty?
+    { self.configuration.text_key => node.content }
   end
 
   def self.parse_attributes(node)
-    node.attributes.empty? ? {} : { self.configuration.attributes_key => Hash[node.attributes.map { |k, v| [k, v.value] } ]}
+    !node.attributes? ? {} : { self.configuration.attributes_key => Hash[node.attributes.map { |a| [a.name, a.value] } ]}
   end
 
   def self.node2json node
-    node.element_children.each_with_object({}) do |child, hash|
+    node.children.each_with_object({}) do |child, hash|
       key = namespaced_node_name child
 
       if hash.has_key?(key)
@@ -67,8 +78,9 @@ module XML2JSON
   end
 
   def self.prefix node
-    if !node.namespace.nil? && !node.namespace.prefix.nil? && !node.namespace.prefix.strip.empty?
-      "#{node.namespace.prefix}:"
+    ns = node.namespaces.namespace
+    if ns && ns.prefix && !ns.prefix.strip.empty?
+      "#{ns.prefix}:"
     else
       ""
     end

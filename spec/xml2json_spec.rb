@@ -2,6 +2,9 @@ require 'rspec/autorun'
 require 'spec_helper'
 require 'xml2json'
 
+# Shutdown libxml error ouput for cleaner output during spec
+LibXML::XML::Error.set_handler(&LibXML::XML::Error::QUIET_HANDLER)
+
 describe XML2JSON do
   describe ".parse" do
     it 'jsonifies parsed hash' do

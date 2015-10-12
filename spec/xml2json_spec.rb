@@ -1,4 +1,4 @@
-require 'rspec/autorun'
+# require 'rspec/autorun'
 require 'spec_helper'
 require 'xml2json'
 
@@ -46,17 +46,17 @@ describe XML2JSON do
     it "handles multiple elements" do
       xml = '<a><x><b>Primo</b><b>Secondo</b></x></a>'
       expect(XML2JSON.parse_to_hash(xml)).to(
-        eq({ "a" => { "x" => { "bs" => [ "Primo", "Secondo" ] } } })
+        eq({ "a" => { "x" => { "b" => [ "Primo", "Secondo" ] } } })
       )
 
       xml = '<a><b><x>Primo</x></b><b><x>Secondo</x></b></a>'
       expect(XML2JSON.parse_to_hash(xml)).to(
-        eq({ "a" => { "bs" => [ { "x" => "Primo" }, { "x" => "Secondo" } ] } })
+        eq({ "a" => { "b" => [ { "x" => "Primo" }, { "x" => "Secondo" } ] } })
       )
 
       xml = '<a><b><x>Primo</x></b><b><x>Secondo</x></b><b><x>Terzo</x></b></a>'
       expect(XML2JSON.parse_to_hash(xml)).to(
-        eq({ "a" => { "bs" => [ { "x" => "Primo" }, { "x" => "Secondo" }, { "x" => "Terzo" }] } })
+        eq({ "a" => { "b" => [ { "x" => "Primo" }, { "x" => "Secondo" }, { "x" => "Terzo" }] } })
       )
     end
 
@@ -73,12 +73,12 @@ describe XML2JSON do
 
       xml = '<r><a url="www.google.it"></a><a url="www.google.com"></a></r>'
       expect(XML2JSON.parse_to_hash(xml)).to(
-        eq({"r" => {"as" => [{ "_attributes" => {"url" => "www.google.it"}},{ "_attributes" => {"url" => "www.google.com"}}]}})
+        eq({"r" => {"a" => [{ "_attributes" => {"url" => "www.google.it"}},{ "_attributes" => {"url" => "www.google.com"}}]}})
       )
 
       xml = '<r><a url="www.google.it"><b>ciao</b></a><a url="www.google.com"><b>ciao</b></a></r>'
       expect(XML2JSON.parse_to_hash(xml)).to(
-        eq({"r" => {"as" => [{ "_attributes" => {"url" => "www.google.it"}, "b" => "ciao"},{ "_attributes" => {"url" => "www.google.com"}, "b" => "ciao"}]}})
+        eq({"r" => {"a" => [{ "_attributes" => {"url" => "www.google.it"}, "b" => "ciao"},{ "_attributes" => {"url" => "www.google.com"}, "b" => "ciao"}]}})
       )
     end
 
@@ -100,7 +100,7 @@ describe XML2JSON do
       let(:xml) { '<r xmlns:content="http://purl.org/rss/1.0/modules/content/"><content:encoded>Hello</content:encoded><content:encoded>World</content:encoded></r>' }
       it "parses namespaced node names" do
         expect(XML2JSON.parse_to_hash(xml)).to(
-          eq({"r" => { "_namespaces" => { "xmlns:content" => "http://purl.org/rss/1.0/modules/content/" }, "content:encodeds" => [ "Hello", "World" ] } })
+          eq({"r" => { "_namespaces" => { "xmlns:content" => "http://purl.org/rss/1.0/modules/content/" }, "content:encoded" => [ "Hello", "World" ] } })
         )
       end
     end
@@ -119,14 +119,6 @@ describe XML2JSON do
       end
     end
 
-    context "pluralize" do
-      it "pluralizes keys name when multiple nodes" do
-        xml = '<root><item>Primo</item><item>Secondo</item></root>'
-        expect(XML2JSON.parse_to_hash(xml)).to(
-          eq({ "root" => { "items" => [ "Primo", "Secondo"] } })
-        )
-      end
-    end
   end
 
   context "configuration" do
